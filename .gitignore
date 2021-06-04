@@ -35,6 +35,11 @@ TAGS
 build-dir/
 build/
 /.cproject
+/.cache
 /.project
 
 version.cache
+
+lte.xml
+
+*.txt

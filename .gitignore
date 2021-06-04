@@ -34,6 +34,7 @@ TAGS
 build-dir/
 build/
 /.cproject
+/.cache
 /.project
 
 version.cache
@@ -49,3 +50,7 @@ cmake-build-release/
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json
+
+lte.xml
+
+/*.txt

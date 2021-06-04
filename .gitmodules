@@ -1,0 +1,3 @@
+[submodule "src/evalvid"]
+	path = src/evalvid
+	url = https://gitlab.com/Hao123br/evalvid-ns3.git

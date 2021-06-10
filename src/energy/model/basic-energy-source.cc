@@ -24,6 +24,7 @@
 #include "ns3/double.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/simulator.h"
+#include <cmath>
 
 namespace ns3 {
 
@@ -182,6 +183,222 @@ BasicEnergySource::UpdateEnergySource (void)
     }
 }
 
+
+//Função de recarga
+void
+BasicEnergySource::Recharge (void)
+{
+        //m_initialEnergyJ
+        //m_remainingEnergyJ
+        //NS_LOG_UNCOND("RECARREGANDO UAV");
+        if(!recharged){
+                if(m_remainingEnergyJ + (m_initialEnergyJ*0.2) < m_initialEnergyJ){
+                        
+                        //NS_LOG_UNCOND("ENERGIA ATUAL:");
+                        //NS_LOG_UNCOND(m_remainingEnergyJ);
+                        m_remainingEnergyJ = m_remainingEnergyJ + (m_initialEnergyJ*0.2);
+                        Simulator::Schedule (Seconds(1),
+                                                 &BasicEnergySource::Recharge,
+                                                 this);
+                        //NS_LOG_UNCOND("ENERGIA PARCIALMENTE CARREGADA");
+                        //NS_LOG_UNCOND(m_remainingEnergyJ);
+                }else{
+                        m_remainingEnergyJ = m_initialEnergyJ;
+                        recharged = true;
+                        //NS_LOG_UNCOND("UAV COMPLETAMENTE CARREGADO");
+                        //NS_LOG_UNCOND(m_remainingEnergyJ);
+                }
+        }
+
+        
+}
+
+void
+BasicEnergySource::CallRecharge (void){
+
+        recharged = false;
+        //NS_LOG_UNCOND("chamando recarga 2 UAV");      
+
+        Simulator::Schedule (Seconds(1),
+                                 &BasicEnergySource::Recharge,
+                                 this);
+
+
+}
+
+
+bool BasicEnergySource::GetRechargeStatus(){
+
+        return recharged;
+}
+
+
+//x é um valor fixo representando gasto com processamento, a ser definido pelo usuario durante o uso da função
+void BasicEnergySource::ProcessEnergy(double x){
+
+  if (m_remainingEnergyJ >= x)
+  {
+     m_remainingEnergyJ -= x;
+  }else{
+    NS_LOG_WARN("ENERGIA INSUFICIENTE");
+  }
+
+}
+
+//Calculo de energia por mobilidade
+//Ordem de entrada dos parametros: posição X, posição Y, posição Z, tempo de atualização, velocidade
+float
+BasicEnergySource::UpdateEnergyMobSource (double x, double y, double z, float time, float speed)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("BasicEnergySource:Updating remaining energy.");
+
+  double remainingEnergy = m_remainingEnergyJ;
+  CalculateRemainingEnergy ();
+   // NS_LOG_UNCOND("X" << AtualPosX);
+  //NS_LOG_UNCOND("y" << AtualPosY);
+  //NS_LOG_UNCOND("Z" << AtualPosZ);
+
+  if(AtualPosX < 0){
+    //holder = Simulator::Now ();
+    //tempo_atual = holder.GetSeconds();
+    AtualPosX = x;
+    AtualPosY = y;
+    AtualPosZ = z;
+
+    //  NS_LOG_UNCOND("X" << AtualPosX);
+    //  NS_LOG_UNCOND("y" << AtualPosY);
+    //  NS_LOG_UNCOND("Z" << AtualPosZ);
+    return 0;
+  }
+
+
+ 
+
+  
+  float distance;
+
+  float part1 = (AtualPosX - x)*(AtualPosX - x);
+   //NS_LOG_UNCOND(part1);
+  float part2 = (AtualPosY - y)*(AtualPosY - y);
+   //NS_LOG_UNCOND(part2);
+
+  distance = sqrt(part1 + part2);
+  NS_LOG_DEBUG("distancia percorrida: " << distance);
+
+  float updown = z - AtualPosZ;
+
+  AtualPosX = x;
+  AtualPosY = y;
+  AtualPosZ = z;
+
+  
+
+  float energy_spent = 0;
+
+  //float tempo_passado = tempo_atual;
+  //float tempo_atual = holder.GetSeconds();
+
+
+  //Considerando hovering como uma variação muito baixa de posicionamento, neste caso igual ou abaixo de meio metro
+  if(distance > 0.5){
+    NS_LOG_DEBUG("mobilidade feita, distacia percorrida no tempo: " << distance);
+    //Implementar calculo de P * (D/V) || V pode ser abstraido caso necessario como D/T
+    //ou seja o espaço percorrido no intervalo de tempo da tualização
+    //P = Consumo de velocidade constante (Considerando o móduo de velocidade constante, adaptar caso contrario)
+    //D = Distancia calculada, V = velocidade 
+
+    float pm = 300;
+    //float speed = 4; //M/s
+
+    float gasto = pm * (distance/speed);
+    energy_spent += gasto;
+    //NS_LOG_UNCOND(gasto);
+
+
+
+  }else if(AtualPosZ > 0.2){
+    NS_LOG_DEBUG("UAV em hovering");
+
+    //p =??
+
+    //float energy_cons = p * 
+
+    // implementar calculo de P * (T2 - t1)
+    //P = Consumo de hovering, T1 = tempo atual, t2 = tempo da ultima medição
+    float ph = 15;
+
+    float gasto = ph * time;
+    energy_spent += gasto;
+    //NS_LOG_UNCOND(gasto);
+
+  }else{
+    NS_LOG_DEBUG("UAV no solo");
+  }
+
+  if(updown !=0){
+    NS_LOG_DEBUG("UAV SUBINDO OU DESCENDO");
+
+    if(updown > 0){
+      //NS_LOG_UNCOND("UAV subindo");
+      //Variavel de gasto fixo de subida
+      float pc = 250;
+      energy_spent += (pc * (updown/speed));
+      //NS_LOG_UNCOND(pc * (updown/speed));
+      //NS_LOG_UNCOND(updown);
+
+    }else{
+      //NS_LOG_UNCOND("UAV descendo");
+      //Variavel de gasto fixo de descida
+      float pd = 215;
+      energy_spent += ((pd * (-1)) * (updown/speed));
+      //NS_LOG_UNCOND((pd * (-1)) * (updown/speed));
+      //NS_LOG_UNCOND(updown);
+    }
+  }
+
+  
+
+  NS_LOG_DEBUG("ENERGIA INICIAL: " << GetInitialEnergy());
+
+  if (m_remainingEnergyJ >= energy_spent)
+  {
+     m_remainingEnergyJ -= energy_spent;
+  }else{
+    //NS_LOG_UNCOND("ENERGIA BAIXA");
+  }
+
+ 
+
+  NS_LOG_DEBUG("ENERGIA RESTANTE:" << m_remainingEnergyJ);
+
+  NS_LOG_DEBUG("Energia gasta: " << energy_spent);
+
+  if (!m_depleted && m_remainingEnergyJ <= m_lowBatteryTh * m_initialEnergyJ)
+    {
+      m_depleted = true;
+      HandleEnergyDrainedEvent ();
+    }
+  else if (m_depleted && m_remainingEnergyJ > m_highBatteryTh * m_initialEnergyJ)
+    {
+      m_depleted = false;
+      HandleEnergyRechargedEvent ();
+    }
+  else if (m_remainingEnergyJ != remainingEnergy)
+    {
+      NotifyEnergyChanged ();
+    }
+
+  if (m_energyUpdateEvent.IsExpired ())
+    {
+      m_energyUpdateEvent = Simulator::Schedule (m_energyUpdateInterval,
+                                                 &BasicEnergySource::UpdateEnergySource,
+                                                 this);
+    }
+
+	return energy_spent;
+}
+
 /*
  * Private functions start here.
  */
@@ -224,7 +441,11 @@ BasicEnergySource::CalculateRemainingEnergy (void)
   Time duration = Simulator::Now () - m_lastUpdateTime;
   NS_ASSERT (duration.IsPositive ());
   // energy = current * voltage * time
-  double energyToDecreaseJ = (totalCurrentA * m_supplyVoltageV * duration).GetSeconds ();
+  double energyToDecreaseJ = (totalCurrentA * m_supplyVoltageV * duration.GetNanoSeconds ()) / 1e9;
+  if (m_remainingEnergyJ <= energyToDecreaseJ)
+  {
+    energyToDecreaseJ = m_remainingEnergyJ;
+  }
   NS_ASSERT (m_remainingEnergyJ >= energyToDecreaseJ);
   m_remainingEnergyJ -= energyToDecreaseJ;
   NS_LOG_DEBUG ("BasicEnergySource:Remaining energy = " << m_remainingEnergyJ);

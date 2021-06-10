@@ -79,6 +79,34 @@ public:
   virtual void UpdateEnergySource (void);
 
   /**
+   * Implements ProcessEnergy.
+   */
+
+  virtual void ProcessEnergy(double);
+
+  /**
+   * Implements UpdateEnergyMobSource.
+   */
+  virtual float UpdateEnergyMobSource (double, double, double, float, float);
+
+  /**
+   * Implements recharge function.
+   */
+  virtual void Recharge (void);
+
+  /**
+   * Implements call of recharge function.
+   */
+
+  virtual void CallRecharge (void);
+
+  /**
+   * Implements recharge status declaration.
+   */
+
+
+  virtual bool GetRechargeStatus(void);
+  /**
    * \param initialEnergyJ Initial energy, in Joules
    *
    * Sets initial energy stored in the energy source. Note that initial energy
@@ -153,6 +181,13 @@ private:
   EventId m_energyUpdateEvent;            //!< energy update event
   Time m_lastUpdateTime;                  //!< last update time
   Time m_energyUpdateInterval;            //!< energy update interval
+  double AtualPosX = -1;
+  double AtualPosY = -1;
+  double AtualPosZ = -1;
+  double tempo_atual;
+  double tempo_passado;
+  bool recharged;
+  Time holder;
 
 };
 

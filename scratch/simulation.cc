@@ -9,6 +9,11 @@
 #include "ns3/mobility-module.h"
 #include "ns3/flow-monitor-module.h"
 #include "ns3/netanim-module.h"
+
+#include "ns3/basic-energy-source.h"
+#include "ns3/basic-energy-source-helper.h"
+#include "ns3/energy-source-container.h"
+
 #include "ns3/evalvid-client-server-helper.h"
 #include "ns3/evalvid-client.h"
 #include "ns3/evalvid-server.h"
@@ -17,8 +22,48 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("uav-edge");
 
+enum class EnergyType { mobility, comms, compute};
+
+class UAVEnergyTrace {
+public:
+	std::ofstream mobility;
+	std::ofstream comms;
+	std::ofstream compute;
+
+	UAVEnergyTrace()
+	{
+		mobility.open("mobility-energy.txt", std::ofstream::out | std::ofstream::trunc);
+		comms.open("comms-energy.txt", std::ofstream::out | std::ofstream::trunc);
+		compute.open("compute-energy.txt", std::ofstream::out | std::ofstream::trunc);
+	}
+
+	~UAVEnergyTrace()
+	{
+		mobility.close();
+		comms.close();
+		compute.close();
+	}
+};
+
+class UAVInfo {
+public:
+	EventId compute_energy_event;
+
+	UAVInfo(){}
+};
+
+const float MOBILITY_ENERGY_INTERVAL = 1; //second
+const float COMMS_ENERGY_INTERVAL = 1; //seconds
+const float COMPUTE_ENERGY_INTERVAL = 1; //seconds
+const float COMMS_ENERGY_COST = 50; //Joules
+const float COMPUTE_ENERGY_COST = 30; //Joules
+
 double UAVtxpower = 15;
+float uav_speed = 10;
 std::string ns3_dir;
+UAVEnergyTrace uav_energy_trace;
+unordered_map<unsigned int, Ptr<Node>> uav_by_id;
+unordered_map<unsigned int, UAVInfo> uavs_info;
 
 bool IsTopLevelSourceDir (std::string path)
 {
@@ -139,6 +184,20 @@ void install_mobility(NodeContainer staticNodes,NodeContainer UAVs, NodeContaine
 	BuildingsHelper::Install(UEs);
 }
 
+void installEnergy(NodeContainer uavs){
+	/*
+	* Create and install energy source on the nodes using helper.
+	*/
+	// source helper
+	BasicEnergySourceHelper basicSourceHelper;
+	basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (350e3));
+	// set update interval
+	basicSourceHelper.Set ("PeriodicEnergyUpdateInterval",
+						 TimeValue (Seconds (1.5)));
+	// install source
+	basicSourceHelper.Install (uavs);
+}
+
 void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
 {
 	static uint16_t m_port = 2000;
@@ -226,6 +285,113 @@ void move_uav(Ptr<Node> uav, Vector destination, double n_vel) {
 	mob->AddWaypoint(Waypoint(Seconds(nWaypointTime), destination));
 }
 
+void write_energy_trace(EnergyType eType, unsigned int id, double energy_spent, double remaining_energy)
+{
+	double currentTime = Simulator::Now().GetSeconds();
+	UAVEnergyTrace& eTrace = uav_energy_trace;
+	std::ostringstream message;
+
+	message << currentTime
+			<< " " << id
+			<< " " << energy_spent
+			<< " " << remaining_energy
+			<< "\n";
+
+	switch(eType)
+	{
+		case EnergyType::mobility:
+			eTrace.mobility << message.str();
+			break;
+
+		case EnergyType::comms:
+			eTrace.comms << message.str();
+			break;
+
+		case EnergyType::compute:
+			eTrace.compute << message.str();
+			break;
+	}
+}
+
+Ptr<BasicEnergySource> get_energy_source(Ptr<Node> uav){
+	Ptr<EnergySourceContainer> energy_container;
+	Ptr<BasicEnergySource> source;
+
+	energy_container = uav->GetObject<EnergySourceContainer> ();
+	source = DynamicCast<BasicEnergySource> (energy_container->Get(0));
+
+	return source;
+}
+
+void update_mobility_energy(NodeContainer uavs)
+{
+	Ptr<Node> uav;
+	unsigned int id;
+	Vector pos;
+	Ptr<BasicEnergySource> source;
+	double energy_spent, remaining_energy;
+
+	for (auto iter = uavs.Begin(); iter != uavs.End(); iter++)
+	{
+		uav = *iter;
+
+		id = uav->GetId();
+		pos = uav->GetObject<MobilityModel>()->GetPosition ();
+
+		source = get_energy_source(uav);
+
+		//Ordem de entrada dos parametros: posição X, posição Y, posição Z, tempo de atualização, velocidade
+		energy_spent = source->UpdateEnergyMobSource(pos.x,pos.y,pos.z, MOBILITY_ENERGY_INTERVAL, uav_speed);
+		remaining_energy = source->GetRemainingEnergy();
+
+		write_energy_trace(EnergyType::mobility, id, energy_spent, remaining_energy);
+	}
+
+	Simulator::Schedule(Seconds(MOBILITY_ENERGY_INTERVAL), &update_mobility_energy, uavs);
+}
+
+void update_comms_energy(NodeContainer uavs){
+	Ptr<Node> uav;
+	unsigned int id;
+	Ptr<BasicEnergySource> source;
+	double remaining_energy;
+
+	for (auto iter = uavs.Begin(); iter != uavs.End(); iter++)
+	{
+		uav = *iter;
+		id = uav->GetId();
+		source = get_energy_source(uav);
+		source->ProcessEnergy(COMMS_ENERGY_COST);
+
+		remaining_energy = source->GetRemainingEnergy();
+		write_energy_trace(EnergyType::comms, id, COMMS_ENERGY_COST, remaining_energy);
+	}
+
+	Simulator::Schedule(Seconds(COMMS_ENERGY_INTERVAL), &update_comms_energy, uavs);
+}
+
+void update_compute_energy(Ptr<Node> uav){
+	unsigned int id;
+	Ptr<BasicEnergySource> source;
+	double remaining_energy;
+
+	id = uav->GetId();
+	source = get_energy_source(uav);
+	source->ProcessEnergy(COMPUTE_ENERGY_COST);
+
+	remaining_energy = source->GetRemainingEnergy();
+	write_energy_trace(EnergyType::compute, id, COMPUTE_ENERGY_COST, remaining_energy);
+
+	uavs_info[id].compute_energy_event = Simulator::Schedule(Seconds(COMPUTE_ENERGY_INTERVAL), &update_compute_energy, uav );
+}
+
+void initial_compute_energy(NodeContainer uavs){
+	for(auto iter = uavs.Begin(); iter != uavs.End(); ++iter)
+	{
+		update_compute_energy(*iter);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	uint32_t seed = 4242;
@@ -297,6 +463,11 @@ int main(int argc, char* argv[])
 
 	install_LTE(lteHelper, epcHelper, UAVs, UENodes);
 
+	installEnergy (UAVs);
+	Simulator::Schedule(Seconds(MOBILITY_ENERGY_INTERVAL), &update_mobility_energy, UAVs);
+	Simulator::Schedule(Seconds(COMMS_ENERGY_INTERVAL), &update_comms_energy, UAVs);
+	Simulator::Schedule(Seconds(COMPUTE_ENERGY_INTERVAL), &initial_compute_energy, UAVs);
+
 	for (uint32_t i = 0; i < UENodes.GetN(); ++i){
 		request_video(remoteHost, UENodes.Get(i));
 	}
@@ -327,13 +498,14 @@ int main(int argc, char* argv[])
 	flowMonitor = flowHelper.Install(UENodes);
 	Simulator::Schedule(Seconds(simTime-0.001), NetworkStatsMonitor, &flowHelper, flowMonitor);
 
-	move_uav(UAVs.Get(0), Vector(100,100,0.2), 10);
-	move_uav(UAVs.Get(1), Vector(900,100,0.2), 10);
-	move_uav(UAVs.Get(2), Vector(100,900,0.2), 10);
-	move_uav(UAVs.Get(3), Vector(900,900,0.2), 10);
+	move_uav(UAVs.Get(0), Vector(100,100,0.2), uav_speed);
+	move_uav(UAVs.Get(1), Vector(900,100,0.2), uav_speed);
+	move_uav(UAVs.Get(2), Vector(100,900,0.2), uav_speed);
+	move_uav(UAVs.Get(3), Vector(900,900,0.2), uav_speed);
 
 	Simulator::Stop(Seconds(simTime));
 	Simulator::Run();
+
 	Simulator::Destroy();
 	return 0;
 }

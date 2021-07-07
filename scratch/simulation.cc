@@ -408,33 +408,6 @@ void installEnergy(NodeContainer uavs){
 	basicSourceHelper.Install (uavs);
 }
 
-void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
-{
-	static uint16_t m_port = 2000;
-	static int request_id = 0;
-
-	Ptr<Ipv4> ipv4 = sender_node->GetObject<Ipv4>();
-	Ipv4InterfaceAddress iaddr = ipv4->GetAddress(1, 0);
-	Ipv4Address ipAddr = iaddr.GetLocal();
-
-	EvalvidServerHelper server(m_port);
-	server.SetAttribute("SenderTraceFilename", StringValue(ns3_dir + std::string("src/evalvid/st_highway_cif.st")));
-	//server.SetAttribute("SenderDumpFilename", StringValue("evalvid_sd_" + std::to_string(request_id)));
-	server.SetAttribute("SenderDumpFilename", StringValue("evalvid-logs/sd_" + std::to_string(request_id)));
-	server.SetAttribute("PacketPayload", UintegerValue(512));
-	ApplicationContainer apps = server.Install(sender_node);
-	apps.Start(Seconds(5));
-
-	EvalvidClientHelper client(ipAddr, m_port);
-	//client.SetAttribute("ReceiverDumpFilename", StringValue("evalvid_rd_" + std::to_string(request_id)));
-	client.SetAttribute("ReceiverDumpFilename", StringValue("evalvid-logs/rd_" + std::to_string(request_id)));
-	apps = client.Install(receiver_node);
-	apps.Start(Seconds(5));
-
-	request_id++;
-	m_port++;
-}
-
 void NetworkStatsMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon)
 {
     flowMon->CheckForLostPackets();
@@ -1118,58 +1091,6 @@ void RadioLinkFailureCallback(std::string context, uint64_t imsi,
                                    << rnti);
 }
 
-// move node "smoothly" towards the given position
-void move_drones(Ptr<Node> drone, Vector position, double n_vel)
-{
-
-  bool teletransport = true;
-
-  if (teletransport)
-  {
-    // set new node position for a smoother movement
-    auto mob = drone->GetObject<MobilityModel>();
-    mob->SetPosition(position);
-    return;
-  }
-
-  else
-  {
-    double interval = 0.1;
-    double new_n_vel = interval * n_vel;
-
-    // get mobility model for drone
-    Vector m_position = get_node_position(drone);
-    double distance = CalculateDistance(position, m_position);
-
-    // 1meter of accuracy is acceptable
-    if (distance > 1)
-    {
-      Vector diff = position - m_position;
-
-      double len = diff.GetLength();
-      Vector new_pos = m_position + Vector((diff.x / len) * new_n_vel,
-                                           (diff.y / len) * new_n_vel,
-                                           (diff.z / len) * new_n_vel);
-      // making sure not to overshoot
-      if (CalculateDistance(new_pos, position) >
-          CalculateDistance(position, m_position))
-      {
-        new_pos = position;
-        return;
-      }
-
-      // set new node position for a smoother movement
-      auto mob = drone->GetObject<MobilityModel>();
-      mob->SetPosition(new_pos);
-
-      Simulator::Schedule(management_interval, &move_drones, drone, position,
-                          n_vel);
-      return;
-    }
-    NS_LOG_DEBUG("drone arrived at " << Simulator::Now().GetSeconds());
-  }
-}
-
 /* ======================= TRAFFIC GENERATORS ===============*/
 
 void migrate(Ptr<Node> sourceServer, Ptr<Node> targetServer,
@@ -1448,7 +1369,7 @@ void UAVManager()
       if (drones_in_use[i] == false and
           hot_spots_served[closest_hot_spot_index] == false)
       {
-        move_drones(drone,
+        move_uav(drone,
                     Vector(closest_hot_spot.first, closest_hot_spot.second, 20),
                     100);
         drones_in_use[i] = true;
@@ -2015,10 +1936,6 @@ int main(int argc, char* argv[])
 		Ipv4Address remoteIpAddr = remoteIpv4->GetAddress(1, 0).GetLocal();
 		user_ip[i] = remoteIpAddr;
 	}
-
-	//for (uint32_t i = 0; i < ueNodes.GetN(); ++i){
-	//	request_video(remoteHost, ueNodes.Get(i));
-	//}
 
 	AnimationInterface animator("lte.xml");
 	animator.SetMobilityPollInterval(Seconds(1));

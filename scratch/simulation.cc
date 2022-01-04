@@ -1269,12 +1269,12 @@ void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer,
   Time udpInterval = Seconds(interPacketInterval);
   static int applicationPort = 11000;
 
-  Ptr<Ipv4> remoteIpv4 = targetServer->GetObject<Ipv4>();
+  Ptr<Ipv4> remoteIpv4 = ueNode->GetObject<Ipv4>();
   Ipv4Address remoteIpAddr =
       remoteIpv4->GetAddress(1, 0).GetLocal(); // Interface 0 is loopback
 
   UdpServerHelper server(applicationPort);
-  ApplicationContainer apps = server.Install(targetServer);
+  ApplicationContainer apps = server.Install(ueNode);
   apps.Start(Simulator::Now());
   apps.Stop(management_interval);
 
@@ -1283,7 +1283,7 @@ void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer,
   UdpClientHelper client(remoteIpAddr, applicationPort);
   client.SetAttribute("Interval", TimeValue(udpInterval));
   client.SetAttribute("PacketSize", UintegerValue(MaxPacketSize));
-  ApplicationContainer appc = client.Install(ueNode);
+  ApplicationContainer appc = client.Install(targetServer);
   appc.Start(Simulator::Now());
   appc.Stop(management_interval);
 
@@ -2112,10 +2112,11 @@ int main(int argc, char* argv[])
 		ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
 	}
 
-	Ptr<Ipv4> pgwIpv4 = pgw->GetObject<Ipv4>();
-	Ptr<Ipv4StaticRouting> pgwStaticRouting = ipv4RoutingHelper.GetStaticRouting(pgwIpv4);
-	uint32_t pgw2sgwInterface = pgwIpv4->GetInterfaceForPrefix(Ipv4Address("14.0.0.0"),Ipv4Mask("255.255.255.0"));
-	pgwStaticRouting->AddNetworkRouteTo(Ipv4Address("10.0.0.0"), Ipv4Mask("255.255.255.0"), pgw2sgwInterface);
+	Ptr<Node> sgw = epcHelper->GetSgwNode();
+	Ptr<Ipv4> sgwIpv4 = sgw->GetObject<Ipv4>();
+	Ptr<Ipv4StaticRouting> sgwStaticRouting = ipv4RoutingHelper.GetStaticRouting(sgwIpv4);
+	uint32_t sgw2pgwInterface = sgwIpv4->GetInterfaceForPrefix(Ipv4Address("14.0.0.0"),Ipv4Mask("255.255.255.0"));
+	sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.255.255.0"), sgw2pgwInterface);
 
 	NodeContainer staticNodes;
 	staticNodes.Add(epcHelper->GetSgwNode());
@@ -2124,6 +2125,20 @@ int main(int argc, char* argv[])
 	install_mobility(staticNodes, staticBSNodes, uavNodes, ueNodes);
 
 	install_LTE(lteHelper, epcHelper, staticBSNodes, uavNodes, ueNodes);
+
+	for (uint32_t u = 0; u < staticBSNodes.GetN(); ++u) {
+		Ptr<Node> BSNode = staticBSNodes.Get(u);
+		Ptr<Ipv4> BSIpv4 = BSNode->GetObject<Ipv4>();
+		Ptr<Ipv4StaticRouting> BSStaticRouting = ipv4RoutingHelper.GetStaticRouting(BSIpv4);
+		BSStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.255.255.0"), 1);
+	}
+
+	for (uint32_t u = 0; u < uavNodes.GetN(); ++u) {
+		Ptr<Node> uavNode = uavNodes.Get(u);
+		Ptr<Ipv4> uavIpv4 = uavNode->GetObject<Ipv4>();
+		Ptr<Ipv4StaticRouting> uavStaticRouting = ipv4RoutingHelper.GetStaticRouting(uavIpv4);
+		uavStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.255.255.0"), 1);
+	}
 
 	installEnergy (uavNodes);
 

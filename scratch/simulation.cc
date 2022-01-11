@@ -1445,7 +1445,7 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
   }
 
   // schedule itself in 1sec
-  Simulator::Schedule(management_interval, &ThroughputMonitor, fmhelper,
+  Simulator::Schedule(management_interval, ThroughputMonitor, fmhelper,
                       flowMon);
 }
 
@@ -2191,7 +2191,7 @@ int main(int argc, char* argv[])
 	Simulator::Schedule(Seconds(MOBILITY_ENERGY_INTERVAL), &update_mobility_energy, uavNodes);
 	Simulator::Schedule(Seconds(COMMS_ENERGY_INTERVAL), &update_comms_energy, uavNodes);
 	Simulator::Schedule(Seconds(COMPUTE_ENERGY_INTERVAL), &initial_compute_energy, uavNodes);
-	Simulator::Schedule(management_interval, &ThroughputMonitor, &flowHelper, flowMonitor); // recurrent
+	Simulator::Schedule(management_interval, ThroughputMonitor, &flowHelper, flowMonitor); // recurrent
   Simulator::Schedule(management_interval, &UAVManager);                           // only executed in the beginning?
   Simulator::Schedule(management_interval, &just_a_monitor);                 // just a monitor
   Simulator::Schedule(Simulator::Now(), &manager);

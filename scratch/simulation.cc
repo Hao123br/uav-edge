@@ -1487,7 +1487,7 @@ void UAVManager()
   }
 
   // zero neighbors matrix after repositioning drones
-  if (algorithm == "iavbs")
+  if (algorithm == "iuavbs")
   {
     for (uint32_t i = 0; i < numBSs; i++)
       for (uint32_t u = 0; u < numUEs; u++)

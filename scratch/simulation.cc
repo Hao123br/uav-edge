@@ -1899,6 +1899,7 @@ void manager()
                         edgeMigrationChart[i][bestEdgeServer] = Simulator::Now().GetSeconds();
                         edgeUe[serving_node][i] = 0;
                         edgeUe[bestEdgeServer][i] = 1;
+						serving_node = bestEdgeServer;
                     }
                 }
             }

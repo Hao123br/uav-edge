@@ -147,7 +147,7 @@ int monitor_calls = 0;
 std::string mobil_trace = "traces/koln.tcl";
 std::string req_mode = "random";
 std::string requests_trace = "traces/requests.tcl_but_not_really";
-std::string handover_policy = "classic";
+std::string handover_policy = "iuavbs";
 float distance_multiplier = 1.0 / 10;
 
 uint16_t node_remote = 1; // HOST_REMOTO
@@ -207,7 +207,7 @@ std::map<int, int> path_imsi;
 // perform migrations
 bool doMigrate = true;
 Time managerInterval = Seconds(1);
-std::string algorithm = "mosca";
+std::string algorithm = "iuavbs";
 
 // server characteristics
 // the first index is the metric: lat, bw, and cost

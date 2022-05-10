@@ -342,6 +342,11 @@ Ptr<Node> config_LTE(Ptr<LteHelper> lte, Ptr<PointToPointEpcHelper> epc)
 	lte->SetPathlossModelAttribute ("ShadowSigmaOutdoor", DoubleValue (3.0));
 	lte->SetPathlossModelAttribute ("Los2NlosThr", DoubleValue (100));
 
+	if (handover_policy == "none")
+		lteHelper->SetHandoverAlgorithmType("ns3::A2A4RsrqHandoverAlgorithm");
+	else
+		lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
+
 	Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(9)); // Default 5
 	// Modo de transmissão (SISO [0], MIMO [1])
 	Config::SetDefault("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue(0));
@@ -1111,6 +1116,7 @@ IF NOT POSSIBLE ASSIGN A RANDOM FOG SERVER TO THE USER.
     }
 
     cellUe[cellid - 1][imsi - 1] = rnti;
+	rnti_cells[cellid][rnti] = imsi;
 }
 
 void NotifyHandoverStartUe(string context,
@@ -1157,6 +1163,7 @@ void NotifyHandoverEndOkUe(string context,
     outfile.close();
 
     cellUe[cellid - 1][imsi - 1] = rnti;
+	rnti_cells[cellid][rnti] = imsi;
 }
 
 void NotifyConnectionEstablishedEnb(string context,

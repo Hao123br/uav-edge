@@ -111,6 +111,7 @@ const float COMMS_ENERGY_INTERVAL = 1; //seconds
 const float COMPUTE_ENERGY_INTERVAL = 1; //seconds
 const float COMMS_ENERGY_COST = 50; //Joules
 const float COMPUTE_ENERGY_COST = 30; //Joules
+const float ZERO_SIGNAL_LEVEL = -999; //dbm
 const unsigned int ENB_BW = 25;
 const unsigned int UAV_BW = 25;
 
@@ -262,7 +263,7 @@ void initialize_vectors()
 	/*============= state variables =======================*/
 	/* connection management structures */
 	cellUe.setDimensions(numBSs, numUEs);
-	neighbors.assign(numBSs, std::vector<double>(numUEs, 0));
+	neighbors.assign(numBSs, std::vector<double>(numUEs, ZERO_SIGNAL_LEVEL));
 	handoverPredictions.setDimensions(numUEs, 3);
 	x2AddressMatrix.setDimensions(numBSs, numBSs);
 
@@ -1632,7 +1633,7 @@ void handoverManager(std::string path)
   // user-wise strongest cell implementation
   int imsi = nodeid + 1;
   uint32_t servingCell = get_cell(nodeid);
-  double rsrp = -9999999;
+  double rsrp = ZERO_SIGNAL_LEVEL;
   uint32_t bestNeighborCell = -1;
   int signal_threshold = 3;
 
@@ -1683,7 +1684,6 @@ void handoverManager(std::string path)
     }
 
     if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
-        neighbors[servingCell][imsi - 1] != 0 &&
         bestNeighborCell != servingCell)
     {
 
@@ -1707,7 +1707,6 @@ void handoverManager(std::string path)
     }
 
     if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
-        neighbors[servingCell][imsi - 1] != 0 &&
         bestNeighborCell != servingCell)
     {
       if (enableHandover)

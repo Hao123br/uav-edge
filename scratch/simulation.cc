@@ -106,6 +106,13 @@ struct Handover
   }
 };
 
+struct AppData
+{
+	int latency;
+	int bandwidth;
+	int priority;
+};
+
 const float MOBILITY_ENERGY_INTERVAL = 1; //second
 const float COMMS_ENERGY_INTERVAL = 1; //seconds
 const float COMPUTE_ENERGY_INTERVAL = 1; //seconds
@@ -217,8 +224,9 @@ int serverReqs[4][3] = {{1, 1, 4}, {1, 2, 3}, {10, 10, 2}, {100, 100, 1}};
 
 // applications class 1, 2, 3, and 4
 // latency in ms and bw in mbps, and prioritary
-int applicationReqs[3][3] = {{1, 10, 1}, {10, 100, 1}, {1000, 1, 0}};
-uint16_t applicationType = 0;
+//int applicationReqs[3][3] = {{1, 10, 1}, {10, 100, 1}, {1000, 1, 0}};
+std::map<std::string, struct AppData> applicationReqs;
+std::string applicationType ("voice");
 
 //-----VARIABLES THAT DEPEND ON THE NUMBER OF SERVERS----
 // The resources variable tells which server has one or
@@ -258,8 +266,30 @@ Ptr<ListPositionAllocator> generatePositionAllocator(int, int, std::string alloc
 // global lte helper for handover management
 Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
 
+void load_app_data()
+{
+	std::ifstream apps(ns3_dir + std::string("/scratch/app_data.txt"));
+	std::string line;
+
+	while (std::getline(apps, line)) {
+		std::string type;
+		vector<std::string> split_string;
+		struct AppData data;
+
+		boost::split(split_string, line, boost::is_any_of(","));
+
+		type = split_string[0];
+		data.latency = stoi(split_string[1]);
+		data.bandwidth = stoi(split_string[2]);
+		data.priority = stoi(split_string[3]);
+
+		applicationReqs[type] = data;
+	}
+}
+
 void initialize_vectors()
 {
+	load_app_data();
 	/*============= state variables =======================*/
 	/* connection management structures */
 	cellUe.setDimensions(numBSs, numUEs);
@@ -1818,7 +1848,7 @@ void manager()
                 cost.push_back(serverReqs[3][1]);
             }
 
-            if (latency.back() < applicationReqs[applicationType][0])
+            if (latency.back() < applicationReqs[applicationType].latency)
             {
                 served_with_reqs++;
             }
@@ -1874,7 +1904,7 @@ void manager()
                     // Get the last insertion to the latency container
                     // and check if requirements are being met
                     // or if server is out of resources
-                    if (server_latency > applicationReqs[applicationType][0] ||
+                    if (server_latency > applicationReqs[applicationType].latency ||
                         resources[edgeId] == 0)
                         score = 0;
                     else

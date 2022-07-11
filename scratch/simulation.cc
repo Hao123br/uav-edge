@@ -372,6 +372,8 @@ std::string GetTopLevelSourceDir (void)
 Ptr<Node> config_LTE(Ptr<LteHelper> lte, Ptr<PointToPointEpcHelper> epc)
 {
 	lte->SetEpcHelper(epc);
+	//Discard sinr trace. It can generate files bigger than 1GB.
+	Config::SetDefault("ns3::PhyStatsCalculator::DlRsrpSinrFilename", StringValue("/dev/null"));
 	Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
 
 	NS_LOG_UNCOND("Pathloss model: HybridBuildingsPropagationLossModel ");

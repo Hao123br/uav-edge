@@ -2246,31 +2246,32 @@ int main(int argc, char* argv[])
 		user_ip[i] = remoteIpAddr;
 	}
 
+	AnimationInterface* animator;
 	if(enableAnimation) {
-		AnimationInterface animator("lte.xml");
-		animator.SetMobilityPollInterval(Seconds(1));
-		animator.SetMaxPktsPerTraceFile(10000000);
+		animator = new AnimationInterface ("lte.xml");
+		animator->SetMobilityPollInterval(Seconds(1));
+		animator->SetMaxPktsPerTraceFile(10000000);
 		for (uint32_t i = 0; i < staticBSNodes.GetN(); ++i) {
-			animator.UpdateNodeDescription(staticBSNodes.Get(i), "SC " + std::to_string(i));
-			animator.UpdateNodeColor(staticBSNodes.Get(i), 0, 200, 45);
-			animator.UpdateNodeSize(staticBSNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
+			animator->UpdateNodeDescription(staticBSNodes.Get(i), "SC " + std::to_string(i));
+			animator->UpdateNodeColor(staticBSNodes.Get(i), 0, 200, 45);
+			animator->UpdateNodeSize(staticBSNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
 		}
 		for (uint32_t i = 0; i < uavNodes.GetN(); ++i) {
-			animator.UpdateNodeDescription(uavNodes.Get(i), "UAV " + std::to_string(i));
-			animator.UpdateNodeColor(uavNodes.Get(i), 250, 200, 45);
-			animator.UpdateNodeSize(uavNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
+			animator->UpdateNodeDescription(uavNodes.Get(i), "UAV " + std::to_string(i));
+			animator->UpdateNodeColor(uavNodes.Get(i), 250, 200, 45);
+			animator->UpdateNodeSize(uavNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
 		}
 		for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
-			animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
-			animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
-			animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
+			animator->UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
+			animator->UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
+			animator->UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
 		}
-		animator.UpdateNodeDescription(staticNodes.Get(0), "SGW");
-		animator.UpdateNodeDescription(staticNodes.Get(1), "PGW");
-		animator.UpdateNodeDescription(staticNodes.Get(2), "RemoteHost");
+		animator->UpdateNodeDescription(staticNodes.Get(0), "SGW");
+		animator->UpdateNodeDescription(staticNodes.Get(1), "PGW");
+		animator->UpdateNodeDescription(staticNodes.Get(2), "RemoteHost");
 		for (uint32_t k = 0; k < staticNodes.GetN(); ++k) {
-			animator.UpdateNodeColor(staticNodes.Get(k), 110, 150, 45);
-			animator.UpdateNodeSize(staticNodes.Get(k)->GetId(),10,10);
+			animator->UpdateNodeColor(staticNodes.Get(k), 110, 150, 45);
+			animator->UpdateNodeSize(staticNodes.Get(k)->GetId(),10,10);
 		}
 	}
 

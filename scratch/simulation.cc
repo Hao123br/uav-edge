@@ -2148,7 +2148,7 @@ int main(int argc, char* argv[])
 
 	CommandLine cmd;
 	
-	cmd.AddValue("numSCs", "how many static cells are in the simulation", numStaticCells);
+	cmd.AddValue("numENBs", "how many static cells are in the simulation", numStaticCells);
 	cmd.AddValue("numUAVs", "how many UAVs are in the simulation", numUAVs);
 	cmd.AddValue("numUEs", "how many UEs are in the simulation", numUEs);
 	cmd.AddValue("seed", "random seed value.", seed);

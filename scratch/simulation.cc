@@ -1606,7 +1606,6 @@ void schedule_handover(int id_user, int id_source, int id_target)
   int h_time = (int)Simulator::Now().GetSeconds();
   int max_handovers_per_second = 3;
 
-  handover_pending[id_user] = true;
   // reject handover if in this second more than the limit have been performed
   if (handovers_per_second.find(h_time) != handovers_per_second.end())
   {
@@ -1695,6 +1694,8 @@ void schedule_handover(int id_user, int id_source, int id_target)
   else
     handovers_per_second[h_time] += 1;
   // if handover is valid, add it to list of handovers
+
+  handover_pending[id_user] = true;
 }
 
 void handoverManager(std::string path)

@@ -58,9 +58,11 @@ def getData(scenarios):
 			print("scenario " + scenario[1] + " has no data")
 			qos_mean = QosData(0,0,0)
 		else:
+			print("scenario {} has {} data points".format(scenario[1], len(runs)))
 			qos_mean = QosData._make(np.mean(qos, axis=0))
 
 		data[scenario[0]] = qos_mean
+	print("")
 	return data
 
 ScenarioVariant = namedtuple("ScenarioVariant", ["name", "path"])

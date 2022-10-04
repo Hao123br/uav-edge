@@ -375,6 +375,10 @@ Ptr<Node> config_LTE(Ptr<LteHelper> lte, Ptr<PointToPointEpcHelper> epc)
 	lte->SetEpcHelper(epc);
 	//Discard sinr trace. It can generate files bigger than 1GB.
 	Config::SetDefault("ns3::PhyStatsCalculator::DlRsrpSinrFilename", StringValue("/dev/null"));
+	Config::SetDefault("ns3::PhyStatsCalculator::UlSinrFilename", StringValue("/dev/null"));
+	Config::SetDefault("ns3::MacStatsCalculator::DlOutputFilename", StringValue("/dev/null"));
+	Config::SetDefault("ns3::PhyRxStatsCalculator::DlRxOutputFilename", StringValue("/dev/null"));
+	Config::SetDefault("ns3::PhyTxStatsCalculator::DlTxOutputFilename", StringValue("/dev/null"));
 	Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
 
 	NS_LOG_UNCOND("Pathloss model: HybridBuildingsPropagationLossModel ");

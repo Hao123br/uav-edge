@@ -1597,7 +1597,7 @@ bool find_handover(Handover h)
 void schedule_handover(int id_user, int id_source, int id_target)
 {
   // inter drones handovers may be tricky
-  bool block_drones_handovers = true;
+  bool block_drones_handovers = false;
   bool random_time = false;
   int h_time = (int)Simulator::Now().GetSeconds();
   int max_handovers_per_second = 3;

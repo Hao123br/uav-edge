@@ -54,3 +54,5 @@ cmake-build-release/
 lte.xml
 
 /*.txt
+/*.png
+/compile_commands.json

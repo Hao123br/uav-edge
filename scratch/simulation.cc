@@ -113,6 +113,8 @@ struct AppData
 	int priority;
 };
 
+enum class NodeType {STATIC, STATIC_BS, UAV, UE};
+
 const float MOBILITY_ENERGY_INTERVAL = 1; //second
 const float COMMS_ENERGY_INTERVAL = 1; //seconds
 const float COMPUTE_ENERGY_INTERVAL = 1; //seconds
@@ -137,7 +139,7 @@ float uav_speed = 10;
 std::string ns3_dir;
 UAVEnergyTrace uav_energy_trace;
 unordered_map<unsigned int, Ptr<Node>> uav_by_id;
-unordered_map<unsigned int, UAVInfo> uavs_info;
+std::vector<UAVInfo> uavs_info;
 
 // scenario variables
 std::vector<double> ues_sinr;
@@ -262,6 +264,7 @@ void handoverManager(std::string);
 void migrate(Ptr<Node> , Ptr<Node>, Ipv4Address, Ipv4Address);
 int getCellId(int);
 Ptr<ListPositionAllocator> generatePositionAllocator(int, int, std::string allocation);
+static int get_relative_id(int absolute_id, NodeType type);
 
 // global lte helper for handover management
 Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
@@ -309,6 +312,7 @@ void initialize_vectors()
 	edgeMigrationChart.assign(numUEs, std::vector<int>(numEdgeServers, 0));
 
 	drones_in_use.resize(numUAVs);
+	uavs_info.assign(numUAVs, UAVInfo());
 	hot_spots_served.resize(number_of_hot_spots);
 
 	//-----VARIABLES THAT DEPEND ON THE NUMBER OF SERVERS----
@@ -535,10 +539,10 @@ void move_uav(Ptr<Node> uav, Vector destination, double n_vel) {
 	if(distance <= 1)
 		return;
 
-	unsigned int nodeId = uav->GetId();
+	unsigned int id = get_relative_id(uav->GetId(), NodeType::UAV);
 	double currentTime = Simulator::Now().GetSeconds();
 	double nWaypointTime;
-	NS_LOG_DEBUG("moving uav with nodeId: " << nodeId << " from " << m_position << " to " << destination << " time: " << currentTime);
+	NS_LOG_DEBUG("moving uav with id: " << id << " from " << m_position << " to " << destination << " time: " << currentTime);
 
 	mob->EndMobility();
 	mob->AddWaypoint(Waypoint(Simulator::Now(), m_position));
@@ -597,7 +601,7 @@ void update_mobility_energy(NodeContainer uavs)
 	{
 		uav = *iter;
 
-		id = uav->GetId();
+		id = get_relative_id(uav->GetId(), NodeType::UAV);
 		pos = uav->GetObject<MobilityModel>()->GetPosition ();
 
 		source = get_energy_source(uav);
@@ -621,7 +625,7 @@ void update_comms_energy(NodeContainer uavs){
 	for (auto iter = uavs.Begin(); iter != uavs.End(); iter++)
 	{
 		uav = *iter;
-		id = uav->GetId();
+		id = get_relative_id(uav->GetId(), NodeType::UAV);
 		source = get_energy_source(uav);
 		source->ProcessEnergy(COMMS_ENERGY_COST);
 
@@ -637,7 +641,7 @@ void update_compute_energy(Ptr<Node> uav){
 	Ptr<BasicEnergySource> source;
 	double remaining_energy;
 
-	id = uav->GetId();
+	id = get_relative_id(uav->GetId(), NodeType::UAV);
 	source = get_energy_source(uav);
 	source->ProcessEnergy(COMPUTE_ENERGY_COST);
 
@@ -885,7 +889,6 @@ int get_cell(int user_id)
   return -1;
 }
 
-
 int get_cell_from_imsi(int imsi)
 {
   int servingCell = 0;
@@ -922,6 +925,34 @@ int getNodeId(Ptr<Node> node, string type = "server")
   }
 
   return -1;
+}
+
+static int get_relative_id(int absolute_id, NodeType type)
+{
+	int id_base;
+	int relative_id;
+	switch(type) {
+		case NodeType::STATIC:
+			id_base = 0;
+			break;
+
+		case NodeType::STATIC_BS:
+			id_base = staticBSNodes.Get(0)->GetId();
+			NS_ASSERT_MSG(absolute_id >= id_base, "Absolute id too small. Node type: STATIC_BS");
+			break;
+
+		case NodeType::UAV:
+			id_base = uavNodes.Get(0)->GetId();
+			NS_ASSERT_MSG(absolute_id >= id_base, "Absolute id too small. Node type: UAV");
+			break;
+
+		case NodeType::UE:
+			id_base = ueNodes.Get(0)->GetId();
+			NS_ASSERT_MSG(absolute_id >= id_base, "Absolute id too small. Node type: UE");
+			break;
+	}
+	relative_id = absolute_id - id_base;
+	return relative_id;
 }
 
 int getEdge(int nodeId)
@@ -2201,7 +2232,7 @@ int main(int argc, char* argv[])
 		animator.UpdateNodeSize(uavNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
     }
     for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
-		animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j+1));
+		animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
 		animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
 		animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
     }

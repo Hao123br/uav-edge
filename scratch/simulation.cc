@@ -176,6 +176,7 @@ bool useCa = false;
 /* connection management structures */
 matriz<int> cellUe;
 std::vector<std::vector<double>> neighbors;
+std::vector<bool> handover_pending;
 // structure to store handover predictions
 // // [0] -> time of the handover
 // // [1] -> source cell
@@ -297,6 +298,7 @@ void initialize_vectors()
 	/*============= state variables =======================*/
 	/* connection management structures */
 	cellUe.setDimensions(numBSs, numUEs);
+	handover_pending.assign(numUEs, false);
 	neighbors.assign(numBSs, std::vector<double>(numUEs, ZERO_SIGNAL_LEVEL));
 	handoverPredictions.setDimensions(numUEs, 3);
 	x2AddressMatrix.setDimensions(numBSs, numBSs);
@@ -1136,6 +1138,8 @@ void NotifyConnectionEstablishedUe(string context,
                                    uint16_t cellid,
                                    uint16_t rnti)
 {
+	int oldCell;
+
     NS_LOG_INFO(Simulator::Now().GetSeconds() << " " << context << " UE IMSI " << imsi << ": connected to CellId " << cellid << " with RNTI " << rnti << "\n");
 
     std::stringstream temp_cell_dir;
@@ -1179,6 +1183,11 @@ IF NOT POSSIBLE ASSIGN A RANDOM FOG SERVER TO THE USER.
         resources[cellid - 1]--;
     }
 
+	oldCell = get_cell(imsi - 1);
+	if(oldCell != -1)
+		cellUe[oldCell][imsi - 1] = 0;
+
+	handover_pending[imsi - 1] = false;
     cellUe[cellid - 1][imsi - 1] = rnti;
 	rnti_cells[cellid][rnti] = imsi;
 }
@@ -1226,6 +1235,7 @@ void NotifyHandoverEndOkUe(string context,
     outfile << imsi << endl;
     outfile.close();
 
+	handover_pending[imsi - 1] = false;
     cellUe[cellid - 1][imsi - 1] = rnti;
 	rnti_cells[cellid][rnti] = imsi;
 }
@@ -1592,6 +1602,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
   int h_time = (int)Simulator::Now().GetSeconds();
   int max_handovers_per_second = 3;
 
+  handover_pending[id_user] = true;
   // reject handover if in this second more than the limit have been performed
   if (handovers_per_second.find(h_time) != handovers_per_second.end())
   {
@@ -1599,9 +1610,9 @@ void schedule_handover(int id_user, int id_source, int id_target)
       return;
   }
 
-  if (block_drones_handovers)
+  if (block_drones_handovers && is_drone(id_target) && is_drone(id_source))
   {
-    if (is_drone(id_target) && is_drone(id_source))
+	  NS_LOG_WARN("Handover between drones forbidden");
       return;
   }
 
@@ -1612,7 +1623,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
   // if this handover has already been attempted, return.
   if (find_handover(handover))
   {
-    // NS_LOG_DEBUG("Handover already exists");
+    NS_LOG_WARN("Handover already exists");
     return;
   }
 
@@ -1627,7 +1638,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
   // NS_LOG_DEBUG("User device in state " << ueRrc->GetState());
   if (ueRrc->GetState() != LteUeRrc::CONNECTED_NORMALLY)
   {
-    // NS_LOG_DEBUG("Wrong LteUeRrc state!");
+    NS_LOG_WARN("Wrong LteUeRrc state!");
     return;
   }
   // NS_TEST_ASSERT_MSG_EQ (ueRrc->GetState (), LteUeRrc::CONNECTED_NORMALLY,
@@ -1699,6 +1710,12 @@ void handoverManager(std::string path)
   double rsrp = ZERO_SIGNAL_LEVEL;
   uint32_t bestNeighborCell = -1;
   int signal_threshold = 3;
+
+  if (handover_pending[nodeid])
+  {
+	//NS_LOG_WARN("UE with IMSI " << imsi << " has a pending handover. Skipping.");
+	return;
+  }
 
   if ((int)servingCell == -1)
   {

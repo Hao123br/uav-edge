@@ -1670,7 +1670,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
     handover = Handover(Simulator::Now().GetSeconds(), id_user, cellUe[id_source][id_user], id_source, id_target);
     NS_LOG_INFO(handover);
     handover_vector.push_back(handover);
-    lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(id_user),
+    lteHelper->HandoverRequest(MilliSeconds(10), ueDevs.Get(id_user),
                                enbDevs.Get(id_source), enbDevs.Get(id_target));
   }
 

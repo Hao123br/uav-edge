@@ -2115,6 +2115,8 @@ int main(int argc, char* argv[])
 {
 	uint32_t seed = 4242;
 	short simTime = 100;
+	short remMode = 0; // [0]: REM disabled; [1]: generate REM at 1 second of simulation;
+	//[2]: generate REM at the end of the simulation
 
 	LogComponentEnable ("uav-edge", LOG_LEVEL_INFO);
 	LogComponentEnable ("EvalvidClient", LOG_LEVEL_INFO);
@@ -2127,6 +2129,7 @@ int main(int argc, char* argv[])
 	cmd.AddValue("numUAVs", "how many UAVs are in the simulation", numUAVs);
 	cmd.AddValue("numUEs", "how many UEs are in the simulation", numUEs);
 	cmd.AddValue("seed", "random seed value.", seed);
+	cmd.AddValue("remMode","Radio environment map mode",remMode);
 	cmd.Parse(argc, argv);
 
 	ns3::RngSeedManager::SetSeed(seed);
@@ -2290,6 +2293,27 @@ int main(int argc, char* argv[])
   //                 MakeCallback(&RadioLinkFailureCallback));
 
   lteHelper->EnableTraces(); // enable all traces
+
+	Ptr<RadioEnvironmentMapHelper> remHelper = CreateObject<RadioEnvironmentMapHelper> ();
+	if (remMode > 0){
+		remHelper->SetAttribute ("ChannelPath", StringValue ("/ChannelList/3"));
+		remHelper->SetAttribute ("XMin", DoubleValue (0.0));
+		remHelper->SetAttribute ("XMax", DoubleValue (2500.0));
+		remHelper->SetAttribute ("XRes", UintegerValue (1000));
+		remHelper->SetAttribute ("YMin", DoubleValue (0.0));
+		remHelper->SetAttribute ("YMax", DoubleValue (2500.0));
+		remHelper->SetAttribute ("YRes", UintegerValue (1000));
+		remHelper->SetAttribute ("Z", DoubleValue (1.0));
+		remHelper->SetAttribute ("Bandwidth", UintegerValue (UAV_BW));
+		if(remMode == 1){
+			remHelper->SetAttribute ("OutputFile", StringValue ("rem-start.out"));
+			Simulator::Schedule (Seconds (1.0),&RadioEnvironmentMapHelper::Install,remHelper);
+		} else {
+			remHelper->SetAttribute ("StopWhenDone", BooleanValue (false));
+			remHelper->SetAttribute ("OutputFile", StringValue ("rem-end.out"));
+			Simulator::Schedule (Seconds (simTime-0.06),&RadioEnvironmentMapHelper::Install,remHelper);
+		}
+	}
 
 	Simulator::Stop(Seconds(simTime));
 	Simulator::Run();

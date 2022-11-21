@@ -82,11 +82,12 @@ struct Handover
 {
   double time;
   int user;
+  int rnti;
   int source;
   int target;
 
-  Handover(double t, int u, int s, int tg)
-      : time{t}, user{u}, source{s}, target{tg} {}
+  Handover(double t, int u, int r, int s, int tg)
+      : time{t}, user{u}, rnti{r}, source{s}, target{tg} {}
 
   // operator to compare two handover instances within a given time window
   bool operator==(const Handover &other) const
@@ -99,7 +100,7 @@ struct Handover
 
   friend std::ostream &operator<<(std::ostream &os, const Handover &h)
   {
-    os << "Handover(" << h.time << ", " << h.user << ", " << h.source << ", "
+    os << "Handover(" << h.time << ", " << h.user << ", " << h.rnti << ", " << h.source << ", "
        << h.target << ")";
 
     return os;
@@ -1605,7 +1606,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
   }
 
   // create handover identifier
-  Handover handover(Simulator::Now().GetSeconds(), id_user, id_source,
+  Handover handover(Simulator::Now().GetSeconds(), id_user, cellUe[id_source][id_user], id_source,
                     id_target);
 
   // if this handover has already been attempted, return.
@@ -1658,7 +1659,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
     std::uniform_real_distribution<> dis(0, 1.0);
     int handover_time = dis(generator);
 
-    handover = Handover(handover_time, id_user, id_source, id_target);
+    handover = Handover(handover_time, id_user, cellUe[id_source][id_user], id_source, id_target);
     NS_LOG_INFO(handover);
     handover_vector.push_back(handover);
     lteHelper->HandoverRequest(Seconds(handover_time), ueDevs.Get(id_user),
@@ -1666,7 +1667,7 @@ void schedule_handover(int id_user, int id_source, int id_target)
   }
   else
   {
-    handover = Handover(Simulator::Now().GetSeconds(), id_user, id_source, id_target);
+    handover = Handover(Simulator::Now().GetSeconds(), id_user, cellUe[id_source][id_user], id_source, id_target);
     NS_LOG_INFO(handover);
     handover_vector.push_back(handover);
     lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(id_user),

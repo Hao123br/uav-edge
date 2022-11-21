@@ -122,6 +122,8 @@ const float COMPUTE_ENERGY_INTERVAL = 1; //seconds
 const float COMMS_ENERGY_COST = 50; //Joules
 const float COMPUTE_ENERGY_COST = 30; //Joules
 const float ZERO_SIGNAL_LEVEL = -999; //dbm
+const float ENB_HEIGHT = 25; //m
+const float UAV_HEIGHT = 6; //m
 const unsigned int ENB_BW = 25;
 const unsigned int UAV_BW = 25;
 
@@ -265,7 +267,7 @@ void requestApplication(Ptr<Node>, Ptr<Node>, double);
 void handoverManager(std::string);
 void migrate(Ptr<Node> , Ptr<Node>, Ipv4Address, Ipv4Address);
 int getCellId(int);
-Ptr<ListPositionAllocator> generatePositionAllocator(int, int, std::string allocation);
+Ptr<ListPositionAllocator> generatePositionAllocator(int, int, float, std::string allocation);
 static int get_relative_id(int absolute_id, NodeType type);
 
 // global lte helper for handover management
@@ -462,7 +464,7 @@ void install_mobility(NodeContainer staticNodes, NodeContainer staticBSNodes, No
 
 	MobilityHelper enbHelper;
 	enbHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-	auto bsPosition = generatePositionAllocator(numStaticCells, 2000, "random");
+	auto bsPosition = generatePositionAllocator(numStaticCells, 2500, ENB_HEIGHT, "random");
 	enbHelper.SetPositionAllocator(bsPosition);
 	enbHelper.Install(staticBSNodes);
 	BuildingsHelper::Install(staticBSNodes);
@@ -470,7 +472,7 @@ void install_mobility(NodeContainer staticNodes, NodeContainer staticBSNodes, No
 	MobilityHelper UAVHelper;
 	UAVHelper.SetMobilityModel("ns3::WaypointMobilityModel",
 								"InitialPositionIsWaypoint", BooleanValue (true));
-	auto uavPosition = generatePositionAllocator(numUAVs, 2000, "random");
+	auto uavPosition = generatePositionAllocator(numUAVs, 2500, UAV_HEIGHT, "random");
 	UAVHelper.SetPositionAllocator (uavPosition);
 	UAVHelper.Install (uavNodes);
 	BuildingsHelper::Install(uavNodes);
@@ -678,7 +680,7 @@ std::string exec(std::string cmd)
 
 Ptr<ListPositionAllocator>
 generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
-                          std::string allocation = "random")
+						  float height = 45, std::string allocation = "random")
 {
 
   Ptr<ListPositionAllocator> HpnPosition =
@@ -694,7 +696,7 @@ generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
       NS_LOG_DEBUG("adding cell to position " << b * distance_multiplier << " "
                                      << c * distance_multiplier);
       HpnPosition->Add(
-          Vector3D(b * distance_multiplier, c * distance_multiplier, 45));
+          Vector3D(b * distance_multiplier, c * distance_multiplier, height));
     }
   }
 
@@ -703,7 +705,7 @@ generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
     for (int i = 0; i < number_of_nodes; i++)
     {
       HpnPosition->Add(
-          Vector3D(distribution(generator), distribution(generator), 45));
+          Vector3D(distribution(generator), distribution(generator), height));
     }
   }
 

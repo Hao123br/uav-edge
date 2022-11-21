@@ -157,7 +157,7 @@ int monitor_calls = 0;
 std::string mobil_trace = "traces/koln.tcl";
 std::string req_mode = "random";
 std::string requests_trace = "traces/requests.tcl_but_not_really";
-std::string handover_policy = "iuavbs";
+std::string handover_policy = "classic";
 float distance_multiplier = 1.0 / 10;
 
 uint16_t node_remote = 1; // HOST_REMOTO

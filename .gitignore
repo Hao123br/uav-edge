@@ -56,3 +56,9 @@ lte.xml
 /*.txt
 /*.png
 /compile_commands.json
+
+*.out
+
+rem-end.png
+
+rem-start.png

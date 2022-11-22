@@ -60,5 +60,7 @@ lte.xml
 *.out
 
 rem-end.png
-
 rem-start.png
+
+sem/
+results/

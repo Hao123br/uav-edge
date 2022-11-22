@@ -192,6 +192,7 @@ std::vector<Ipv4Address> user_ip;
 std::vector<double> user_requests;
 std::vector<double> user_throughput;
 std::vector<bool> unserved_users;
+std::vector<bool> active_users;
 
 std::vector<std::vector<int>> edgeUe;
 std::vector<std::vector<int>> edgeMigrationChart;
@@ -313,6 +314,7 @@ void initialize_vectors()
 	user_requests.assign(numUEs, 0);
 	user_throughput.assign(numUEs, 0);
 	unserved_users.assign(numUEs, 0);
+	active_users.assign(numUEs, false);
 
 	edgeUe.assign(numEdgeServers, std::vector<int>(numUEs, 0));
 	edgeMigrationChart.assign(numUEs, std::vector<int>(numEdgeServers, 0));
@@ -1166,31 +1168,34 @@ void NotifyConnectionEstablishedUe(string context,
 TRY TO CONNECT TO THE EDGE SERVER IN THE BEGGINING OF THE SIMULATION,
 IF NOT POSSIBLE ASSIGN A RANDOM FOG SERVER TO THE USER.
 */
-    // resources[cellid - 1] => IS THE POSITION OF THE CELL'S EDGE
-    if (resources[cellid - 1] == 0)
-    {
-        int fallbackServer;
-        // iterate untill an edge with available resources has been chosen
-        do
-        {
-            fallbackServer = rand() % (numEdgeServers);
-            NS_LOG_UNCOND("fallbackServer " << fallbackServer);
-            // make while condition true to reiterate
-            if (resources[fallbackServer] == 0)
-                fallbackServer = cellid - 1;
-        } while (fallbackServer == cellid - 1);
+	if(!active_users.at(imsi-1)){
+		active_users.at(imsi-1) = true;
+		// resources[cellid - 1] => IS THE POSITION OF THE CELL'S EDGE
+		if (resources[cellid - 1] == 0)
+		{
+			int fallbackServer;
+			// iterate untill an edge with available resources has been chosen
+			do
+			{
+				fallbackServer = rand() % (numEdgeServers);
+				NS_LOG_UNCOND("fallbackServer " << fallbackServer);
+				// make while condition true to reiterate
+				if (resources[fallbackServer] == 0)
+					fallbackServer = cellid - 1;
+			} while (fallbackServer == cellid - 1);
 
-        std::cout << "Failed to allocate user" << imsi << " in edge " << cellid - 1 << "\n";
-        std::cout << "allocating to random fog " << fallbackServer << endl;
-        resources[fallbackServer]--;
-        edgeUe[fallbackServer][imsi - 1] = 1;
-    }
-    else
-    {
-        std::cout << "User " << imsi << " connected to edge " << cellid - 1 << endl;
-        edgeUe[cellid - 1][imsi - 1] = 1;
-        resources[cellid - 1]--;
-    }
+			std::cout << "Failed to allocate user" << imsi << " in edge " << cellid - 1 << "\n";
+			std::cout << "allocating to random fog " << fallbackServer << endl;
+			resources[fallbackServer]--;
+			edgeUe[fallbackServer][imsi - 1] = 1;
+		}
+		else
+		{
+			std::cout << "User " << imsi << " connected to edge " << cellid - 1 << endl;
+			edgeUe[cellid - 1][imsi - 1] = 1;
+			resources[cellid - 1]--;
+		}
+	}
 
 	oldCell = get_cell(imsi - 1);
 	if(oldCell != -1)

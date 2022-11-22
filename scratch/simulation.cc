@@ -122,6 +122,7 @@ const float COMPUTE_ENERGY_INTERVAL = 1; //seconds
 const float COMMS_ENERGY_COST = 50; //Joules
 const float COMPUTE_ENERGY_COST = 30; //Joules
 const float ZERO_SIGNAL_LEVEL = -999; //dbm
+const float CONNECTED_SIGNAL_LEVEL = -120; //dbm
 const float ENB_HEIGHT = 25; //m
 const float UAV_HEIGHT = 6; //m
 const unsigned int ENB_BW = 25;
@@ -1725,6 +1726,12 @@ void handoverManager(std::string path)
   if ((int)servingCell == -1)
   {
     return;
+  }
+
+  //check if signal is too low to do a handover successfully
+  if (neighbors[servingCell][nodeid] < CONNECTED_SIGNAL_LEVEL)
+  {
+	return;
   }
 
   if (handover_policy == "iuavbs")

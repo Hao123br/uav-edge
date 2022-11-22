@@ -477,7 +477,7 @@ void install_mobility(NodeContainer staticNodes, NodeContainer staticBSNodes, No
 	UAVHelper.Install (uavNodes);
 	BuildingsHelper::Install(uavNodes);
 
-	Ns2MobilityHelper UEHelper = Ns2MobilityHelper(mobil_trace);
+	Ns2MobilityHelper UEHelper = Ns2MobilityHelper(ns3_dir + mobil_trace);
 	UEHelper.Install(UEs.Begin(), UEs.End());
 	BuildingsHelper::Install(UEs);
 }
@@ -739,7 +739,7 @@ std::map<std::pair<int, int>, double> populate_requests_trace()
   std::map<std::pair<int, int>, double> requests; //
 
   // at 978 user 99 requests 1043.98848 bytes
-  std::ifstream trace_file(requests_trace);
+  std::ifstream trace_file(ns3_dir + requests_trace);
   std::string str;
 
   while (std::getline(trace_file, str))
@@ -1008,7 +1008,7 @@ int get_user_id_from_ipv4(Ipv4Address ip)
 
 void HandoverPrediction(int nodeId, int timeWindow)
 {
-    std::string mobilityTrace = mobil_trace;
+    std::string mobilityTrace = ns3_dir + mobil_trace;
 
     // means no connection has been found
     // happens if it's called too early in the simulation
@@ -1535,7 +1535,7 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
 void UAVManager()
 {
   // get centers from python script
-  exec("python3 scratch/clustering.py");
+  exec(std::string("python3 ") + ns3_dir + std::string("/scratch/clustering.py"));
   std::ifstream centroids("centroids.txt");
   std::vector<std::pair<int, int>> centers;
   double tmp_x, tmp_y;

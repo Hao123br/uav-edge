@@ -2137,6 +2137,7 @@ int main(int argc, char* argv[])
 	short simTime = 100;
 	short remMode = 0; // [0]: REM disabled; [1]: generate REM at 1 second of simulation;
 	//[2]: generate REM at the end of the simulation
+	bool enableAnimation = false;
 
 	LogComponentEnable ("uav-edge", LOG_LEVEL_INFO);
 	LogComponentEnable ("EvalvidClient", LOG_LEVEL_INFO);
@@ -2149,7 +2150,8 @@ int main(int argc, char* argv[])
 	cmd.AddValue("numUAVs", "how many UAVs are in the simulation", numUAVs);
 	cmd.AddValue("numUEs", "how many UEs are in the simulation", numUEs);
 	cmd.AddValue("seed", "random seed value.", seed);
-	cmd.AddValue("remMode","Radio environment map mode",remMode);
+	cmd.AddValue("remMode","Radio environment map mode", remMode);
+	cmd.AddValue("enableAnimation","Enable generation of the netAnim xml", enableAnimation);
 	cmd.Parse(argc, argv);
 
 	ns3::RngSeedManager::SetSeed(seed);
@@ -2242,30 +2244,33 @@ int main(int argc, char* argv[])
 		user_ip[i] = remoteIpAddr;
 	}
 
-	AnimationInterface animator("lte.xml");
-	animator.SetMobilityPollInterval(Seconds(1));
-    for (uint32_t i = 0; i < staticBSNodes.GetN(); ++i) {
-		animator.UpdateNodeDescription(staticBSNodes.Get(i), "SC " + std::to_string(i));
-		animator.UpdateNodeColor(staticBSNodes.Get(i), 0, 200, 45);
-		animator.UpdateNodeSize(staticBSNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
-    }
-    for (uint32_t i = 0; i < uavNodes.GetN(); ++i) {
-		animator.UpdateNodeDescription(uavNodes.Get(i), "UAV " + std::to_string(i));
-		animator.UpdateNodeColor(uavNodes.Get(i), 250, 200, 45);
-		animator.UpdateNodeSize(uavNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
-    }
-    for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
-		animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
-		animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
-		animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
-    }
-    animator.UpdateNodeDescription(staticNodes.Get(0), "SGW");
-    animator.UpdateNodeDescription(staticNodes.Get(1), "PGW");
-    animator.UpdateNodeDescription(staticNodes.Get(2), "RemoteHost");
-    for (uint32_t k = 0; k < staticNodes.GetN(); ++k) {
-		animator.UpdateNodeColor(staticNodes.Get(k), 110, 150, 45);
-		animator.UpdateNodeSize(staticNodes.Get(k)->GetId(),10,10);
-    }
+	if(enableAnimation) {
+		AnimationInterface animator("lte.xml");
+		animator.SetMobilityPollInterval(Seconds(1));
+		animator.SetMaxPktsPerTraceFile(10000000);
+		for (uint32_t i = 0; i < staticBSNodes.GetN(); ++i) {
+			animator.UpdateNodeDescription(staticBSNodes.Get(i), "SC " + std::to_string(i));
+			animator.UpdateNodeColor(staticBSNodes.Get(i), 0, 200, 45);
+			animator.UpdateNodeSize(staticBSNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
+		}
+		for (uint32_t i = 0; i < uavNodes.GetN(); ++i) {
+			animator.UpdateNodeDescription(uavNodes.Get(i), "UAV " + std::to_string(i));
+			animator.UpdateNodeColor(uavNodes.Get(i), 250, 200, 45);
+			animator.UpdateNodeSize(uavNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
+		}
+		for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
+			animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
+			animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
+			animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
+		}
+		animator.UpdateNodeDescription(staticNodes.Get(0), "SGW");
+		animator.UpdateNodeDescription(staticNodes.Get(1), "PGW");
+		animator.UpdateNodeDescription(staticNodes.Get(2), "RemoteHost");
+		for (uint32_t k = 0; k < staticNodes.GetN(); ++k) {
+			animator.UpdateNodeColor(staticNodes.Get(k), 110, 150, 45);
+			animator.UpdateNodeSize(staticNodes.Get(k)->GetId(),10,10);
+		}
+	}
 
 	Ptr<FlowMonitor> flowMonitor;
 	FlowMonitorHelper flowHelper;

@@ -2195,7 +2195,7 @@ void just_a_monitor()
 int main(int argc, char* argv[])
 {
 	uint32_t seed = 4242;
-	short simTime = 100;
+	short simTime = 200;
 	short remMode = 0; // [0]: REM disabled; [1]: generate REM at 1 second of simulation;
 	//[2]: generate REM at the end of the simulation
 

@@ -150,11 +150,12 @@ std::vector<double> ues_sinr;
 std::ofstream ues_sinr_file;
 std::vector<double> time_to_centroid;
 std::ofstream time_to_centroid_file;
-std::ofstream ue_positions_log;
+std::ofstream ue_status_file;
+std::ofstream uav_status_file;
 uint32_t active_drones = 0;
 // std::string clustering_algoritm = "kmeans";
 
-Time management_interval = Seconds(1);
+Time management_interval = Seconds(10);
 // amount of times manager is called
 int monitor_calls = 0;
 
@@ -174,6 +175,7 @@ bool enablePrediction = true;
 bool verbose = false;
 bool enableHandover = true;
 bool useCa = false;
+bool enableAnimation = false;
 
 /*============= state variables =======================*/
 /* connection management structures */
@@ -223,7 +225,7 @@ std::map<int, int> path_imsi;
 // perform migrations
 bool doMigrate = true;
 Time managerInterval = Seconds(1);
-std::string algorithm = "iuavbs";
+std::string algorithm = "genetic";
 
 // server characteristics
 // the first index is the metric: lat, bw, and cost
@@ -1544,10 +1546,43 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
                       flowMon);
 }
 
+static void update_status_files()
+{
+	ue_status_file.open("ue-status.txt", std::ofstream::out | std::ofstream::trunc);
+	for(auto iter=ueNodes.Begin(); iter!=ueNodes.End(); iter++) {
+		auto ue = *iter;
+		unsigned int id = ue->GetId();
+		Vector pos = ue->GetObject<MobilityModel>()->GetPosition ();
+		ue_status_file << id << "," << pos.x << "," << pos.y << "\n";
+	}
+	ue_status_file.close();
+
+	uav_status_file.open("uav-status.txt", std::ofstream::out | std::ofstream::trunc);
+	for(auto iter=uavNodes.Begin(); iter!=uavNodes.End(); iter++) {
+		auto uav = *iter;
+		unsigned int id = uav->GetId();
+		Vector pos = uav->GetObject<MobilityModel>()->GetPosition ();
+		auto source = get_energy_source(uav);
+		double remaining_energy = source->GetRemainingEnergy();
+		uav_status_file << id << "," << pos.x << "," << pos.y << "," << remaining_energy << "\n";
+	}
+	uav_status_file.close();
+}
+
 void UAVManager()
 {
+  std::string cmd;
   // get centers from python script
-  exec(std::string("python3 ") + ns3_dir + std::string("/scratch/clustering.py"));
+  if(algorithm == "genetic") {
+    update_status_files();
+    cmd = std::string("python3 ") + ns3_dir + std::string("/scratch/uavs_ag.py ");
+    if(enableAnimation)
+      cmd += to_string((int)Simulator::Now().GetSeconds());
+  } else {
+      cmd = std::string("python3 ") + ns3_dir + std::string("/scratch/clustering.py");
+  }
+  exec(cmd);
+
   std::ifstream centroids("centroids.txt");
   std::vector<std::pair<int, int>> centers;
   double tmp_x, tmp_y;
@@ -1560,6 +1595,13 @@ void UAVManager()
   for (uint32_t i = 0; i < numUAVs; i++)
   {
     Ptr<Node> drone = uavNodes.Get(i);
+
+    if(algorithm == "genetic")
+    {
+        move_uav(drone, Vector(centers[i].first, centers[i].second, 20), uav_speed);
+        continue;
+    }
+
     int closest_hot_spot_index = get_closest_center_index(drone, centers);
     if (closest_hot_spot_index == -1)
     {
@@ -2156,7 +2198,6 @@ int main(int argc, char* argv[])
 	short simTime = 100;
 	short remMode = 0; // [0]: REM disabled; [1]: generate REM at 1 second of simulation;
 	//[2]: generate REM at the end of the simulation
-	bool enableAnimation = false;
 
 	LogComponentEnable ("uav-edge", LOG_LEVEL_INFO);
 	LogComponentEnable ("EvalvidClient", LOG_LEVEL_INFO);
@@ -2170,7 +2211,7 @@ int main(int argc, char* argv[])
 	cmd.AddValue("numUEs", "how many UEs are in the simulation", numUEs);
 	cmd.AddValue("seed", "random seed value.", seed);
 	cmd.AddValue("remMode","Radio environment map mode", remMode);
-	cmd.AddValue("enableAnimation","Enable generation of the netAnim xml", enableAnimation);
+	cmd.AddValue("enableAnimation","Enable generation of animation files", enableAnimation);
 	cmd.Parse(argc, argv);
 
 	ns3::RngSeedManager::SetSeed(seed);

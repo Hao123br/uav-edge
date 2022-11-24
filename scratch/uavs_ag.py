@@ -4,7 +4,8 @@ import numpy as np
 import random
 import math
 import matplotlib.pyplot as plt
-
+import csv
+import sys
 
 tx_power = 15  # dbm
 f = 6e8
@@ -158,6 +159,28 @@ def gen_scenario():
 
     return uavs, users, services
 
+def load_scenario():
+
+    uavs = []
+    users = []
+    services = []
+
+    for i in range(n_services):
+        services.append(gen_services())
+
+    with open("uav-status.txt") as data:
+        for uavId, x, y, remainingEnergy in csv.reader(data, delimiter=','):
+            x = round(float(x))
+            y = round(float(y))
+            uavs.append(UAV(uavId, (x,y), remainingEnergy, 100, 100))
+
+    with open("ue-status.txt") as data:
+        for userId, x, y in csv.reader(data, delimiter=','):
+            x = round(float(x))
+            y = round(float(y))
+            users.append(User(userId, (x,y)))
+
+    return uavs, users, services
 
 def view_scenario(uavs, users):
 
@@ -203,10 +226,15 @@ def view_solution(users, uavs, mov_vector):
         plt.scatter(user.position[0], user.position[1], marker="o", color="r")
 
     for uav, m in zip(uavs, mov_vector):
-        plt.arrow(uav.position[0], uav.position[1], + m[0],
+        plt.arrow(uav.position[0], uav.position[1], m[0],
                   m[1], fc="r", ec="r", head_width=1, head_length=0.1)
+    plt.xticks(range(0, 2501, 250))
+    plt.yticks(range(0, 2501, 250))
 
-    plt.show()
+    #plt.show()
+    if len(sys.argv) >= 2:
+        simulationTime=" " + sys.argv[1]
+        plt.savefig(f"solution{simulationTime}.png", format='png', dpi=200, bbox_inches = "tight")
 
 
 def sort_solutions(users, uavs, solutions):
@@ -272,7 +300,8 @@ def gen_solutions(users, uavs):
     plt.plot(fitness)
 
     view_solution(users, uavs, solutions[0])
-
+    uav_positions = [uav.position for uav in uavs]
+    np.savetxt("centroids.txt", uav_positions + solutions[0], delimiter=" ")
 
 def view_connections_matrix(cm):
     plt.figure()
@@ -283,7 +312,7 @@ def view_connections_matrix(cm):
 
 def main():
 
-    uavs, users, services = gen_scenario()
+    uavs, users, services = load_scenario()
 
     gen_solutions(users, uavs)
 

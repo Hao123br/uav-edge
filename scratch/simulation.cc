@@ -127,6 +127,7 @@ const float ENB_HEIGHT = 25; //m
 const float UAV_HEIGHT = 6; //m
 const unsigned int ENB_BW = 25;
 const unsigned int UAV_BW = 25;
+const unsigned int EDGE_RESOURCES = 10;
 
 uint32_t numStaticCells = 20;
 uint32_t numUAVs = 8;
@@ -329,7 +330,9 @@ void initialize_vectors()
 	// The resources variable tells which server has one or
 	// more of the recources needed in this simulation
 	// the resources are:
-	resources.assign(numEdgeServers, 10);
+	NS_ASSERT_MSG(numUEs <= numEdgeServers * EDGE_RESOURCES,
+			"Not enough network resources to serve users. Try increasing the number of server nodes.");
+	resources.assign(numEdgeServers, EDGE_RESOURCES);
 }
 
 bool IsTopLevelSourceDir (std::string path)

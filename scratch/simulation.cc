@@ -388,14 +388,9 @@ Ptr<Node> config_LTE(Ptr<LteHelper> lte, Ptr<PointToPointEpcHelper> epc)
 	Config::SetDefault("ns3::PhyTxStatsCalculator::DlTxOutputFilename", StringValue("/dev/null"));
 	Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
 
-	NS_LOG_UNCOND("Pathloss model: HybridBuildingsPropagationLossModel ");
-	Config::SetDefault("ns3::ItuR1411NlosOverRooftopPropagationLossModel::StreetsOrientation", DoubleValue (25));
-	Config::SetDefault("ns3::ItuR1411NlosOverRooftopPropagationLossModel::BuildingsExtend", DoubleValue (1000));
-	lte->SetAttribute ("PathlossModel", StringValue ("ns3::HybridBuildingsPropagationLossModel"));
+	NS_LOG_UNCOND("Pathloss model: ItuR1411LosPropagationLossModel");
+	lte->SetAttribute ("PathlossModel", StringValue ("ns3::ItuR1411LosPropagationLossModel"));
 	lte->SetPathlossModelAttribute ("Frequency", DoubleValue (2.0e9));
-	lte->SetPathlossModelAttribute ("ShadowSigmaOutdoor", DoubleValue (3.0));
-	lte->SetPathlossModelAttribute ("Los2NlosThr", DoubleValue (100));
-	lte->SetPathlossModelAttribute ("RooftopLevel", DoubleValue (5));
 
 	if (handover_policy == "none")
 		lteHelper->SetHandoverAlgorithmType("ns3::A2A4RsrqHandoverAlgorithm");
